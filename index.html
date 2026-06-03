@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indonesia Interactive Map</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Find Route Panel -->
+    <div id="findRoutePanel" class="find-route-panel">
+        <h2>Find Route</h2>
+        <div class="input-group">
+            <span class="icon">📍</span>
+            <input type="text" id="fromInput" placeholder="From location" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <span class="icon">📍</span>
+            <input type="text" id="toInput" placeholder="To location" autocomplete="off">
+        </div>
+        <button id="searchBtn" class="search-btn" disabled>Search</button>
+        
+        <div class="sort-options">
+            <span>Sort By</span>
+            <button class="sort-btn active" data-sort="fastest">Fastest</button>
+            <button class="sort-btn" data-sort="cheapest">Cheapest</button>
+        </div>
+        
+        <div id="routeResults" class="route-results"></div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="mapContainer" class="map-container">
+        <div id="mapWrapper" class="map-wrapper">
+            <svg id="mapSvg" class="map-svg"></svg>
+            <div id="pinpointsLayer" class="pinpoints-layer"></div>
+            <div id="connectionsLayer" class="connections-layer"></div>
+        </div>
+    </div>
+
+    <!-- Add Pinpoint Modal -->
+    <div id="addPinpointModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add pinpoint</h3>
+                <button class="close-btn" onclick="closeAddPinpointModal()">✕</button>
+            </div>
+            <input type="text" id="pinpointNameInput" placeholder="Enter location name" autocomplete="off">
+            <button class="submit-btn" onclick="submitPinpoint()">Enter</button>
+        </div>
+    </div>
+
+    <!-- Connect Modal -->
+    <div id="connectModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Connect</h3>
+                <button class="close-btn" onclick="closeConnectModal()">✕</button>
+            </div>
+            <input type="number" id="distanceInput" placeholder="Distance (km)" min="1">
+            <select id="transportModeSelect">
+                <option value="">Choose mode</option>
+                <option value="train">Train</option>
+                <option value="bus">Bus</option>
+                <option value="airplane">Airplane</option>
+            </select>
+            <button class="submit-btn" onclick="submitConnection()">Connect</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
