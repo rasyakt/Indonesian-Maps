@@ -26,80 +26,125 @@ let selectedLine = null;
 document.addEventListener('DOMContentLoaded', () => {
     loadIndonesiaMap();
     setupEventListeners();
-    renderPinpoints();
-    renderConnections();
 });
 
 // ==================== MAP LOADING ====================
 function loadIndonesiaMap() {
-    const mapSvg = document.getElementById('mapSvg');
-    
-    // Create Indonesia map SVG
-    const indonesiaMapSVG = `
-        <svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-            <!-- Ocean background -->
-            <rect width="1000" height="500" fill="#B3E5FC"/>
+    fetch('indonesia.svg')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text();
+        })
+        .then(data => {
+            const parser = new DOMParser();
+            const svgDoc = parser.parseFromString(data, 'image/svg+xml');
+            const svgElement = svgDoc.documentElement;
             
-            <!-- Sumatra -->
-            <path d="M 50 80 Q 40 100 45 130 Q 50 160 55 190 Q 60 220 50 250 Q 45 270 55 290 Q 65 310 60 330 L 70 340 L 80 330 L 90 310 L 95 280 L 100 250 L 105 220 L 110 190 L 115 160 L 110 130 L 100 100 L 85 80 Z" 
-                  fill="#FFF9C4" stroke="#1976D2" stroke-width="2"/>
+            const mapSvg = document.getElementById('mapSvg');
             
-            <!-- Java -->
-            <path d="M 200 280 L 220 275 L 250 278 L 280 280 L 310 278 L 340 280 L 370 282 L 400 280 L 420 285 L 410 295 L 390 298 L 360 295 L 330 297 L 300 295 L 270 298 L 240 295 L 210 297 Z" 
-                  fill="#FFF9C4" stroke="#1976D2" stroke-width="2"/>
+            // Set viewBox and attributes of mapSvg
+            const viewBox = svgElement.getAttribute('viewBox') || '0 0 854 385';
+            mapSvg.setAttribute('viewBox', viewBox);
             
-            <!-- Kalimantan -->
-            <path d="M 300 100 Q 320 95 340 100 Q 360 105 380 110 Q 400 120 420 135 Q 435 150 445 170 Q 450 190 445 210 Q 440 230 430 245 Q 420 255 405 260 Q 390 265 375 260 Q 360 255 345 245 Q 330 235 320 220 Q 310 200 305 180 Q 300 160 295 140 Q 292 120 300 100 Z" 
-                  fill="#FFF9C4" stroke="#1976D2" stroke-width="2"/>
+            // Extract width/height from viewBox
+            const viewBoxValues = viewBox.trim().split(/[\s,]+/).map(Number);
+            window.mapWidth = viewBoxValues[2] || 854;
+            window.mapHeight = viewBoxValues[3] || 385;
             
-            <!-- Sulawesi -->
-            <path d="M 500 120 L 515 115 L 530 120 L 540 135 L 535 150 L 545 165 L 560 170 L 565 185 L 555 200 L 540 205 L 530 195 L 525 180 L 515 175 L 510 190 L 500 200 L 490 190 L 495 175 L 490 160 L 485 145 L 490 130 Z" 
-                  fill="#FFF9C4" stroke="#1976D2" stroke-width="2"/>
+            // Set wrapper and SVG dimensions to match the SVG viewBox
+            const wrapper = document.getElementById('mapWrapper');
+            if (wrapper) {
+                wrapper.style.width = window.mapWidth + 'px';
+                wrapper.style.height = window.mapHeight + 'px';
+            }
             
-            <!-- Bali & Nusa Tenggara -->
-            <path d="M 430 290 L 445 288 L 460 290 L 475 292 L 490 290 L 505 292 L 520 294 L 535 292 L 550 295 L 545 302 L 530 300 L 515 302 L 500 300 L 485 302 L 470 300 L 455 302 L 440 300 Z" 
-                  fill="#FFF9C4" stroke="#1976D2" stroke-width="2"/>
+            // Set mapSvg innerHTML to svgElement's innerHTML
+            mapSvg.innerHTML = svgElement.innerHTML;
             
-            <!-- Maluku -->
-            <path d="M 620 180 L 635 178 L 645 185 L 640 195 L 630 200 L 620 195 Z M 660 160 L 670 158 L 678 165 L 675 175 L 665 178 L 658 170 Z" 
-                  fill="#FFF9C4" stroke="#1976D2" stroke-width="2"/>
-            
-            <!-- Papua -->
-            <path d="M 700 150 Q 720 145 740 150 Q 760 155 780 165 Q 800 175 820 190 Q 835 205 845 225 Q 850 245 845 265 Q 840 280 825 290 Q 810 295 790 290 Q 770 285 750 275 Q 730 265 715 250 Q 700 235 690 215 Q 685 195 690 175 Q 695 160 700 150 Z" 
-                  fill="#FFF9C4" stroke="#1976D2" stroke-width="2"/>
-        </svg>
-    `;
-    
-    mapSvg.innerHTML = indonesiaMapSVG;
-    
-    // Fit map to screen
-    fitMapToScreen();
+            // Fit map to screen, and render items
+            fitMapToScreen();
+            renderPinpoints();
+            renderConnections();
+        })
+        .catch(error => {
+            console.error('Error loading SVG map:', error);
+            // Fallback to a placeholder style so it doesn't crash completely
+            window.mapWidth = 1000;
+            window.mapHeight = 500;
+            const wrapper = document.getElementById('mapWrapper');
+            if (wrapper) {
+                wrapper.style.width = window.mapWidth + 'px';
+                wrapper.style.height = window.mapHeight + 'px';
+            }
+            fitMapToScreen();
+        });
+}
+
+function getMinScale() {
+    const container = document.getElementById('mapContainer');
+    if (!container) return 0.5;
+    const w = window.mapWidth || 854;
+    const h = window.mapHeight || 385;
+    return Math.max(container.clientWidth / w, container.clientHeight / h);
 }
 
 function fitMapToScreen() {
     const container = document.getElementById('mapContainer');
-    const wrapper = document.getElementById('mapWrapper');
-    const svg = document.getElementById('mapSvg');
+    if (!container) return;
     
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
     
-    // Calculate scale to fit
-    const scaleX = containerWidth / 1000;
-    const scaleY = containerHeight / 500;
+    const w = window.mapWidth || 854;
+    const h = window.mapHeight || 385;
+    
+    // Calculate scale to fit (cover style)
+    const scaleX = containerWidth / w;
+    const scaleY = containerHeight / h;
     scale = Math.max(scaleX, scaleY);
     
     // Center the map
-    translateX = (containerWidth - 1000 * scale) / 2;
-    translateY = (containerHeight - 500 * scale) / 2;
+    translateX = (containerWidth - w * scale) / 2;
+    translateY = (containerHeight - h * scale) / 2;
     
     updateMapTransform();
 }
 
+function clampTransform() {
+    const container = document.getElementById('mapContainer');
+    if (!container) return;
+    
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    
+    const w = window.mapWidth || 854;
+    const h = window.mapHeight || 385;
+    
+    // 1. Clamp scale to ensure it covers the viewport
+    const minScale = getMinScale();
+    if (scale < minScale) {
+        scale = minScale;
+    }
+    
+    // 2. Clamp translations
+    const maxTranslateX = 0;
+    const minTranslateX = containerWidth - w * scale;
+    translateX = Math.min(maxTranslateX, Math.max(minTranslateX, translateX));
+    
+    const maxTranslateY = 0;
+    const minTranslateY = containerHeight - h * scale;
+    translateY = Math.min(maxTranslateY, Math.max(minTranslateY, translateY));
+}
+
 function updateMapTransform() {
+    clampTransform();
     const wrapper = document.getElementById('mapWrapper');
-    wrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-    wrapper.style.transformOrigin = '0 0';
+    if (wrapper) {
+        wrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        wrapper.style.transformOrigin = '0 0';
+    }
 }
 
 // ==================== EVENT LISTENERS ====================
@@ -118,6 +163,11 @@ function setupEventListeners() {
     // Zoom functionality
     mapContainer.addEventListener('wheel', handleWheel, { passive: false });
     document.addEventListener('keydown', handleKeyDown);
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        fitMapToScreen();
+    });
     
     // Find route inputs
     document.getElementById('fromInput').addEventListener('input', validateRouteInputs);
@@ -186,8 +236,9 @@ function handleWheel(e) {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
+    const minScale = getMinScale();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.max(0.5, Math.min(5, scale * delta));
+    const newScale = Math.max(minScale, Math.min(5, scale * delta));
     
     // Zoom towards mouse position
     const scaleChange = newScale / scale;
@@ -230,7 +281,8 @@ function zoomOut() {
     const centerX = container.clientWidth / 2;
     const centerY = container.clientHeight / 2;
     
-    const newScale = Math.max(0.5, scale * 0.9);
+    const minScale = getMinScale();
+    const newScale = Math.max(minScale, scale * 0.9);
     const scaleChange = newScale / scale;
     
     translateX = centerX - (centerX - translateX) * scaleChange;
